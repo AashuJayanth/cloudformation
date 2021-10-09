@@ -1,0 +1,46 @@
+dependencies:
+  - { stack: propertyconfig, stack_name: "{{ _propertyconfig_stack }}" }
+  - { stack: network, stack_name: "{{ _network_stack }}" }
+  - { stack: sqssns, stack_name: "{{ _racevents_sqssns_stack }}" }
+  - { stack: circuitbreaker, stack_name: "{{ _circuitbreaker_stack }}" }
+  - { stack: rdsproxy, stack_name: "{{ _rds_proxy_stack }}" }
+  ##__DEPENDENCY_PARAMS__
+template_parameters:  
+  LambdaS3Bucket: "{{ S3Bucket }}"
+  Environment: "{{ env }}"
+  Application: "{{ app_name }}"
+  LaasKinesisStream: "{{ laas_stack.stack_outputs.LaasKinesisStream }}"
+  LaasWriterRoleArn: "{{ laas_stack.stack_outputs.LaasWriterRoleArn }}"
+  ContactEmail: "{{ contact_email }}"
+  BusinessUnit: "{{ business_unit }}"
+  LogLevel: "{{ lambda_log_level }}"
+  OktaIntrospectUrl: "{{ oktaintrospecturl }}"
+  CloudWatchRuleState: "{{ cloudwatchrulestate }}"
+  Subnets: "{{ network_stack.stack_outputs.LambdaSubnets }}"
+  Vpc: "{{ network_stack.stack_outputs.Vpc }}"  
+  RacEventsSNSTopicARN: "{{ sqssns_stack.stack_outputs.raceventssnstopicarn }}"
+  CreateReceiptLambdaURL: "{{ LambdaURL }}"
+  CreateReceipteventType: "{{ CreateReceipteventType }}"
+  GenerateReceiptLambdaURL: "{{ LambdaURL }}"
+  GenerateReceipteventType: "{{ GenerateReceipteventType }}"
+  RecieptCategoryIdentifierLambdaURL: "{{ LambdaURL }}"
+  RecieptCategoryIdentifiereventType: "{{ RecieptCategoryIdentifiereventType }}"
+  RdsdbProxyArn: "{{ rdsproxy_stack.stack_outputs.RDSProxyArn }}"
+  RdsdbProxyHost: "{{ rdsproxy_stack.stack_outputs.RDSProxyReaderEndpoint }}"
+  RdsdbUserName: "{{ rdsdb_username }}"
+  RdsdbPort: "{{ rdsdb_port }}"
+  RdsdbName: "{{ rdsdb_name }}"
+  RdsdbLogging: "{{ rdsdb_logging }}"
+  RDSProxyID: "{{ rdsproxy_stack.stack_outputs.RDSProxyID }}"
+  ##__LAMBDA_PARAM_VARS__  
+  CircuitBreakerDynamodbTableArn: "{{ circuitbreaker_stack.stack_outputs.CircuitBreakerDynamodbTableArn }}"
+  CircuitBreakerDynamodbTableName: "{{ circuitbreaker_stack.stack_outputs.CircuitBreakerDynamodbTableName }}"
+  CircuitBreakerStatusCodes: "{{ circuit_status_codes }}"
+  CircuitBreakerFailThreshold: "{{ circuit_fail_threshold }}"
+  CircuitBreakerSuccessThreshold: "{{ circuit_success_threshold }}"
+  CircuitBreakerTimeout: "{{ circuit_timeout }}"
+  CircuitBreakerState: "{{ circuit_state }}"
+  PropertyConfigDynamoTableArn: "{{ propertyconfig_stack.stack_outputs.PropertyConfigDynamoTableArn }}"
+  PropertyConfigDynamoTableName: "{{ propertyconfig_stack.stack_outputs.PropertyConfigDynamoTableName }}"
+  ##__CBREAKER_PARAM_VARS__
+  ##__DYNAMO_VARS__

@@ -1,0 +1,4 @@
+- name: Remove Apigateway file
+  shell: rm -f ../cf-templates/apigateway.yml
+- name: Copy APi gateway file from s3 Artifacts
+  shell: aws s3 cp s3://"{{ S3Bucket }}"/"{{ ApigatewayURL }}"/apigateway.yml ../cf-templates/

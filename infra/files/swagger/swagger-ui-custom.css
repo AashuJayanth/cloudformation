@@ -1,0 +1,7 @@
+.opblock-options {
+  display: none;
+}
+
+div[id^=model-ArrayOf] {
+  display: none;
+}

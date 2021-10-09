@@ -1,0 +1,82 @@
+---
+# variable holding the application name -- this is used in
+# combination with `env` to uniquely identify and tag
+# resources:
+### WARNING: this should be ALL lower case, as things like s3
+### bucket names, which use app_name by default, cannot have
+### upper-case characters in them -- alternately, you can
+### use {{app_name | lower}} as a filter in places where
+### lower-case is required:
+_network_stack: "{{env}}-network"
+_propertyconfig_stack: "{{env}}-propertyconfig-dynamodb"
+_customdomain_stack: "{{env}}-racapi-apigatewaycustomdomain"
+_racevents_sqssns_stack: "{{env}}-racevents-sqssns"
+app_name: paymentreceipt
+racapi_swagger_bucket: "{{env}}-racapi"
+# object holding all aws account numbers needed for deployment:
+accounts:
+  svc_account: 559766880711
+  prod_account: 548110630696
+  dev_account: 219359266667
+  sandbox_account: 879433013307
+  local_account: 877158884793
+# default region: can be overridden on command line as needed:
+region: us-east-1
+cross_account_role: Administrator
+api_gateway_stage_name: "v1"
+root_object: "index.html"
+oktaintrospecturl: "https://rentacenter.okta.com/oauth2/default/v1/introspect"
+_cognito_stack: "{{env}}-racpad-cognitouserpool"
+dns_zone: rentacenter.com
+_dns_zone: rentacenter.com
+elb_hosted_zone: Z1MD280Q78VF18
+app_swagger_ui_bucket: "rac-{{env}}-{{app_name}}-swagger-ui"
+_sqs_stack: "{{env}}-__SQS_STACK__"
+_rds_proxy_stack: "{{env}}-rdsproxy-endpoint"
+_circuitbreaker_stack: "{{env}}-circuitbreaker-dynamodb"
+infra_bucket: "{{infra_buckets.dev_infrabucket}}"
+laas_stack_name: "prod-laas-infra"
+cloudwatchrulestate: "DISABLED"
+Classification: "rac_confidential"
+pointintimerecovery: "true"
+#######  Lambda events #########
+CreateReceipteventType: post
+GenerateReceipteventType: 
+RecieptCategoryIdentifiereventType: 
+##__EVENT_TYPE__
+
+rdsdb_username: "custsvc01"
+rdsdb_port: 5432
+rdsdb_name: "racdb"
+rdsdb_logging: false
+##__RDS_PROXY_GLOBAL__
+circuit_status_codes : "500"
+circuit_fail_threshold : 3
+circuit_success_threshold : 2
+circuit_timeout : 10000
+circuit_state : "ALWAYS_CLOSED"
+##__CBREAKER_GLOBAL__
+# specifies the tag to use for the user_data provisioning repo --
+# this should be overriden per environment as needed
+#ansible_userdata_tag: 1.1-stable
+# this array holds the names of all the cloudformation stacks
+# that comprise your project and should be arranged in the order
+# that stacks should be deployed -- you can override this on the command
+# line to deploy only a single stack -- if not passed on the command line,
+# all stacks will be deployed:
+# NOTE: stack names must be upper- and lower-case letters only -- and don't include '.yml':
+stacks:
+  ## Stacks
+  - lambda
+  - apigateway
+  - apigatewaydeploy
+  ##__STACK_NAME__
+#LocalArtifactPath
+#######
+#logzio_token: "vTiJtlaqLzchPMCEEZAReZqlegIVAkSk"
+contact_email: "AgileTeamMacGyver@rentacenter.com"
+business_unit: "FIELD SYSTEMS"
+# LaaS stack name to utilize stream & cross-account role
+#laas_stack_name: "prod-laas-infra"
+lambda_log_level: "info"
+#lambda_timeout: 60

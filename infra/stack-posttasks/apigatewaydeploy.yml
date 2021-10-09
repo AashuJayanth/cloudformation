@@ -1,0 +1,62 @@
+---
+- name: Create ApiGateway deployment for {{ api_gateway_stage_name }} stage
+  shell: AWS_ACCESS_KEY_ID="{{ assumed_role.sts_creds.access_key }}" \
+         AWS_SECRET_ACCESS_KEY="{{ assumed_role.sts_creds.secret_key }}" \
+         AWS_SESSION_TOKEN="{{ assumed_role.sts_creds.session_token }}" \
+         aws apigateway create-deployment \
+           --region "{{ region }}" \
+           --rest-api-id "{{ apigateway_stack.stack_outputs.paymentreceiptrestapiid }}" \
+           --stage-name "{{ api_gateway_stage_name }}"
+  when: "'AWS_ACCESS_KEY_ID' not in ansible_env"
+
+- name: Create ApiGateway deployment for {{ api_gateway_stage_name }} stage
+  shell:
+         aws apigateway create-deployment \
+           --region "{{ region }}" \
+           --rest-api-id "{{ apigateway_stack.stack_outputs.paymentreceiptrestapiid }}" \
+           --stage-name "{{ api_gateway_stage_name }}"
+  when: "'AWS_ACCESS_KEY_ID' in ansible_env"
+
+- name: Download Swagger API DOC file from API Gateway
+  shell: AWS_ACCESS_KEY_ID="{{ assumed_role.sts_creds.access_key }}" \
+    AWS_SECRET_ACCESS_KEY="{{ assumed_role.sts_creds.secret_key }}" \
+    AWS_SESSION_TOKEN="{{ assumed_role.sts_creds.session_token }}" \
+    aws apigateway get-export \
+    --region "{{ region }}" \
+    --rest-api-id "{{ apigateway_stack.stack_outputs.paymentreceiptrestapiid }}" \
+    --stage-name "{{ api_gateway_stage_name }}" \
+    --export-type oas30 ../files/swagger/swagger.json
+  when: "'AWS_ACCESS_KEY_ID' not in ansible_env"
+
+- name: Download Swagger API DOC file from API Gateway
+  shell: aws apigateway get-export \
+    --region "{{ region }}" \
+    --rest-api-id "{{ apigateway_stack.stack_outputs.paymentreceiptrestapiid }}" \
+    --stage-name "{{ api_gateway_stage_name }}" \
+    --export-type oas30 ../files/swagger/swagger.json
+  when: "'AWS_ACCESS_KEY_ID' in ansible_env"
+
+- name: Remove existing Swagger API DOC file
+  shell: AWS_ACCESS_KEY_ID="{{ assumed_role.sts_creds.access_key }}" \
+    AWS_SECRET_ACCESS_KEY="{{ assumed_role.sts_creds.secret_key }}" \
+    AWS_SESSION_TOKEN="{{ assumed_role.sts_creds.session_token }}" \
+    aws s3 rm s3://"{{ racapi_swagger_bucket }}"/"{{ app_name }}"/swagger/swagger.json
+  when: "'AWS_ACCESS_KEY_ID' not in ansible_env"
+
+- name: Remove existing Swagger API DOC file
+  shell: aws s3 rm s3://"{{ racapi_swagger_bucket }}"/"{{ app_name }}"/swagger/swagger.json
+  when: "'AWS_ACCESS_KEY_ID' in ansible_env"
+
+- name: Upload SwaggerUI API DOCS into s3 bucket
+  shell: AWS_ACCESS_KEY_ID="{{ assumed_role.sts_creds.access_key }}" \
+    AWS_SECRET_ACCESS_KEY="{{ assumed_role.sts_creds.secret_key }}" \
+    AWS_SESSION_TOKEN="{{ assumed_role.sts_creds.session_token }}" \
+    aws s3 cp ../files/swagger/ s3://"{{ racapi_swagger_bucket }}"/"{{ app_name }}"/swagger/ \ --recursive
+  when: "'AWS_ACCESS_KEY_ID' not in ansible_env"
+
+- name: Upload SwaggerUI API DOCS into s3 bucket
+  shell: aws s3 cp ../files/swagger/ s3://"{{ racapi_swagger_bucket }}"/"{{ app_name }}"/swagger/ \ --recursive
+  when: "'AWS_ACCESS_KEY_ID' in ansible_env"
+
+- name: Remove SwaggerUI API DOC file from disk
+  shell: rm -f ../files/swagger/swagger.json

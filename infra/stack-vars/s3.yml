@@ -1,0 +1,4 @@
+template_parameters:
+  ContactEmail: "{{ contact_email }}"
+  BusinessUnit: "{{ business_unit }}"
+  __LAMBDA_FUNCTION__S3Bucket: "{{ app_s3_bucket }}"

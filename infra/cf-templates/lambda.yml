@@ -1,0 +1,403 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Description: paymentreceipt lambda functions
+Parameters:
+  LambdaS3Bucket:
+    Type: String
+    Description: Bucket name which stored lambda code 
+  Environment:
+    Type: String
+    Description: Environment value
+  Application:
+    Type: String
+    Description: Application name
+  LaasKinesisStream:
+    Type: String
+    Description: Laas kinesis stream name
+  LaasWriterRoleArn:
+    Type: String
+    Description: Laas kinesis stream writer role Arn
+  ContactEmail:
+    Type: String
+    Description: Application team contact email
+  BusinessUnit:
+    Type: String
+    Description: Application Business unit name
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: List of Subnets for VPC Attached Lambdas
+  Vpc:
+    Type: String
+    Description: vpc value
+  OktaIntrospectUrl:
+    Type: String
+    Description: Okta auth url
+  CloudWatchRuleState:
+    Type: String
+    Description: Cloud watch rule state value
+  LogLevel:
+    Type: String
+    Description: Lambds Log Level
+  RacEventsSNSTopicARN:
+    Type: String
+    Description: Lambds Log Level
+  
+  CreateReceiptLambdaURL:
+    Type: String
+    Description: Lambda code location inside of bucket
+  CreateReceipteventType:
+    Type: String
+    Description: Lambda code CreateReceipt eventType
+  GenerateReceiptLambdaURL:
+    Type: String
+    Description: Lambda code location inside of bucket
+  GenerateReceipteventType:
+    Type: String
+    Description: Lambda code GenerateReceipt eventType
+  RecieptCategoryIdentifierLambdaURL:
+    Type: String
+    Description: Lambda code location inside of bucket
+  RecieptCategoryIdentifiereventType:
+    Type: String
+    Description: Lambda code RecieptCategoryIdentifier eventType
+  RdsdbUserName:
+    Type: String
+    Description: Rds Database user name
+  RdsdbPort:
+    Type: String
+    Description: Rds Database port
+  RdsdbName:
+    Type: String
+    Description: Rds Database db name
+  RdsdbLogging:
+    Type: String
+    Description: Rds Database logs enable flag
+  RdsdbProxyArn:
+    Type: String
+    Description: Rds Database ARN
+  RdsdbProxyHost:
+    Type: String
+    Description: Rds Database Proxy Host
+  RDSProxyID:
+    Type: String
+    Description: Rds Database Proxy Host
+  ##__LAMBDA_PARA__
+  CircuitBreakerDynamodbTableArn:
+    Type: String
+    Description: Circuit Breaker Dynamodb Table Arn
+  CircuitBreakerDynamodbTableName:
+    Type: String
+    Description: Circuit Breaker Dynamodb Table Name
+  PropertyConfigDynamoTableArn:
+    Type: String
+    Description: Circuit Breaker PropertyConfig Dynamodb Table Arn
+  PropertyConfigDynamoTableName:
+    Type: String
+    Description: Circuit Breaker PropertyConfig Dynamodb Table Name    
+  CircuitBreakerStatusCodes:
+    Type: String
+    Description: Circuit Breaker Status Codes
+  CircuitBreakerFailThreshold:
+    Type: String
+    Description: Circuit Breaker Fail Threshold
+  CircuitBreakerSuccessThreshold:
+    Type: String
+    Description: Circuit Breaker Success Threshold
+  CircuitBreakerTimeout:
+    Type: String
+    Description: Circuit Breaker Timeout
+  CircuitBreakerState:
+    Type: String
+    Description: Circuit Breaker State
+  ##__CBREAKER_PARA__
+  ##__DYNAMO_PARA__
+  
+Resources:
+  LambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+      - PolicyName: Ec2NetworkAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - ec2:DescribeNetworkInterfaces
+            - ec2:CreateNetworkInterface
+            - ec2:DeleteNetworkInterface
+            Resource: "*"
+            Effect: Allow
+      - PolicyName: LaasAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - sts:AssumeRole
+            Resource: !Ref  LaasWriterRoleArn
+            Effect: Allow
+      - PolicyName: CloudwatchAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - cloudwatch:*
+            - logs:*
+            Resource: "*"
+            Effect: Allow
+      - PolicyName: LambdaInvoke
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - lambda:InvokeFunction
+            Resource: "arn:aws:lambda:*:*:function:*"
+            Effect: Allow
+      - PolicyName: SNSAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - sns:Publish
+            Resource: !Ref RacEventsSNSTopicARN
+            Effect: Allow
+      
+      - PolicyName: RdsProxyAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Action:
+            - rds-db:connect
+            Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${RDSProxyID}/*
+            Effect: Allow
+##__RDS_PROXY__
+
+      - PolicyName: DynamoDBAccess
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Action:
+            - dynamodb:BatchGetItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:BatchWriteItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            Resource: 
+            - !Ref CircuitBreakerDynamodbTableArn
+            - !Ref PropertyConfigDynamoTableArn
+            Effect: Allow
+          - Action:
+            - dynamodb:Query
+            Resource: 
+            - !Sub ${CircuitBreakerDynamodbTableArn}/index/*
+            - !Sub ${PropertyConfigDynamoTableArn}/index/*              
+            Effect: Allow
+##__CBREAKER__
+
+##__DYNAMO_DB__
+
+  LambdaSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: Vpc
+      GroupDescription: 'paymentreceipt Lambda Security Group'
+      SecurityGroupIngress:
+      -
+        FromPort: 0
+        ToPort: 65535
+        IpProtocol: tcp
+        CidrIp: 10.0.0.0/8
+  CreateReceipt:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: src/index.handleCreateReceipt
+      Role: !GetAtt [ LambdaRole, Arn ]
+      Runtime: nodejs14.x
+      Timeout: 900
+      Code:
+        S3Bucket: !Ref LambdaS3Bucket
+        S3Key: !Ref CreateReceiptLambdaURL
+      VpcConfig:
+        SecurityGroupIds:
+        - "Fn::GetAtt":
+          - LambdaSG
+          - GroupId
+        SubnetIds: !Ref Subnets          
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          APPNAME: !Ref Application
+          LAAS_KINESIS_STREAM: !Ref LaasKinesisStream
+          LAAS_WRITER_ROLE: !Ref  LaasWriterRoleArn
+          LOG_LEVEL: !Ref LogLevel
+          SERVICE_NAME: CreateReceipt     
+          EVENT_TYPE: !Ref CreateReceipteventType    
+          EVENT_TOPIC_NAME: !Ref RacEventsSNSTopicARN
+          ##__SQS_ENV__
+          RDSDB_USERNAME: !Ref RdsdbUserName
+          RDSDB_PORT: !Ref RdsdbPort
+          RDSDB_NAME: !Ref RdsdbName
+          RDSDB_LOGGING: !Ref RdsdbLogging
+          RDSDB_PROXY_HOST: !Ref RdsdbProxyHost
+          ##__RDS_PROXY_ENV__
+          CIRCUITBREAKER_TABLE_NAME : !Ref CircuitBreakerDynamodbTableName
+          CIRCUITBREAKER_STATUS_CODES : !Ref CircuitBreakerStatusCodes
+          CIRCUITBREAKER_FAILURE_THRESHOLD : !Ref CircuitBreakerFailThreshold
+          CIRCUITBREAKER_SUCCESS_TRESHHOLD : !Ref CircuitBreakerSuccessThreshold
+          CIRCUITBREKAER_TIMEOUT : !Ref CircuitBreakerTimeout
+          CIRCUITBREAKER_STATE : !Ref CircuitBreakerState
+          PROPERTY_CONFIG_TABLE_NAME : !Ref PropertyConfigDynamoTableName          
+                    ##__CBREAKER_ENV__
+          ##__DYNAMO_ENV__
+      Tags:
+        - Key: application
+          Value: !Ref Application
+        - Key: environment
+          Value: !Ref Environment
+        - Key: contact
+          Value: !Ref ContactEmail
+        - Key:  business_unit
+          Value: !Ref BusinessUnit
+        - Key: Stack
+          Value: !Ref AWS::StackName
+  GenerateReceipt:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: src/index.handleGenerateReceipt
+      Role: !GetAtt [ LambdaRole, Arn ]
+      Runtime: nodejs14.x
+      Timeout: 900
+      Code:
+        S3Bucket: !Ref LambdaS3Bucket
+        S3Key: !Ref GenerateReceiptLambdaURL
+      VpcConfig:
+        SecurityGroupIds:
+        - "Fn::GetAtt":
+          - LambdaSG
+          - GroupId
+        SubnetIds: !Ref Subnets          
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          APPNAME: !Ref Application
+          LAAS_KINESIS_STREAM: !Ref LaasKinesisStream
+          LAAS_WRITER_ROLE: !Ref  LaasWriterRoleArn
+          LOG_LEVEL: !Ref LogLevel
+          SERVICE_NAME: GenerateReceipt     
+          EVENT_TYPE: !Ref GenerateReceipteventType    
+          EVENT_TOPIC_NAME: !Ref RacEventsSNSTopicARN
+          ##__SQS_ENV__
+          RDSDB_USERNAME: !Ref RdsdbUserName
+          RDSDB_PORT: !Ref RdsdbPort
+          RDSDB_NAME: !Ref RdsdbName
+          RDSDB_LOGGING: !Ref RdsdbLogging
+          RDSDB_PROXY_HOST: !Ref RdsdbProxyHost
+          ##__RDS_PROXY_ENV__
+          CIRCUITBREAKER_TABLE_NAME : !Ref CircuitBreakerDynamodbTableName
+          CIRCUITBREAKER_STATUS_CODES : !Ref CircuitBreakerStatusCodes
+          CIRCUITBREAKER_FAILURE_THRESHOLD : !Ref CircuitBreakerFailThreshold
+          CIRCUITBREAKER_SUCCESS_TRESHHOLD : !Ref CircuitBreakerSuccessThreshold
+          CIRCUITBREKAER_TIMEOUT : !Ref CircuitBreakerTimeout
+          CIRCUITBREAKER_STATE : !Ref CircuitBreakerState
+          PROPERTY_CONFIG_TABLE_NAME : !Ref PropertyConfigDynamoTableName          
+                    ##__CBREAKER_ENV__
+          ##__DYNAMO_ENV__
+      Tags:
+        - Key: application
+          Value: !Ref Application
+        - Key: environment
+          Value: !Ref Environment
+        - Key: contact
+          Value: !Ref ContactEmail
+        - Key:  business_unit
+          Value: !Ref BusinessUnit
+        - Key: Stack
+          Value: !Ref AWS::StackName
+  RecieptCategoryIdentifier:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: src/index.handleRecieptCategoryIdentifier
+      Role: !GetAtt [ LambdaRole, Arn ]
+      Runtime: nodejs14.x
+      Timeout: 900
+      Code:
+        S3Bucket: !Ref LambdaS3Bucket
+        S3Key: !Ref RecieptCategoryIdentifierLambdaURL
+      VpcConfig:
+        SecurityGroupIds:
+        - "Fn::GetAtt":
+          - LambdaSG
+          - GroupId
+        SubnetIds: !Ref Subnets          
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          APPNAME: !Ref Application
+          LAAS_KINESIS_STREAM: !Ref LaasKinesisStream
+          LAAS_WRITER_ROLE: !Ref  LaasWriterRoleArn
+          LOG_LEVEL: !Ref LogLevel
+          SERVICE_NAME: RecieptCategoryIdentifier     
+          EVENT_TYPE: !Ref RecieptCategoryIdentifiereventType    
+          EVENT_TOPIC_NAME: !Ref RacEventsSNSTopicARN
+          ##__SQS_ENV__
+          RDSDB_USERNAME: !Ref RdsdbUserName
+          RDSDB_PORT: !Ref RdsdbPort
+          RDSDB_NAME: !Ref RdsdbName
+          RDSDB_LOGGING: !Ref RdsdbLogging
+          RDSDB_PROXY_HOST: !Ref RdsdbProxyHost
+          ##__RDS_PROXY_ENV__
+          CIRCUITBREAKER_TABLE_NAME : !Ref CircuitBreakerDynamodbTableName
+          CIRCUITBREAKER_STATUS_CODES : !Ref CircuitBreakerStatusCodes
+          CIRCUITBREAKER_FAILURE_THRESHOLD : !Ref CircuitBreakerFailThreshold
+          CIRCUITBREAKER_SUCCESS_TRESHHOLD : !Ref CircuitBreakerSuccessThreshold
+          CIRCUITBREKAER_TIMEOUT : !Ref CircuitBreakerTimeout
+          CIRCUITBREAKER_STATE : !Ref CircuitBreakerState
+          PROPERTY_CONFIG_TABLE_NAME : !Ref PropertyConfigDynamoTableName          
+                    ##__CBREAKER_ENV__
+          ##__DYNAMO_ENV__
+      Tags:
+        - Key: application
+          Value: !Ref Application
+        - Key: environment
+          Value: !Ref Environment
+        - Key: contact
+          Value: !Ref ContactEmail
+        - Key:  business_unit
+          Value: !Ref BusinessUnit
+        - Key: Stack
+          Value: !Ref AWS::StackName
+##__LAMBDA_FUNC__
+Outputs:
+  GenerateReceiptLambdaArn:
+    Value: !GetAtt GenerateReceipt.Arn
+  RecieptCategoryIdentifierLambdaArn:
+    Value: !GetAtt RecieptCategoryIdentifier.Arn
+##__LAMBDA_OUTPUTS__
+  CreateReceiptLambdaArn:
+    Value: !GetAtt CreateReceipt.Arn

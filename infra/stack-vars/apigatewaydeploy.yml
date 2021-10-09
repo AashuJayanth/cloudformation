@@ -1,0 +1,20 @@
+dependencies:
+
+
+
+  - { stack: racapidomainname, stack_name: "{{ _customdomain_stack }}" }
+
+template_parameters:
+  Environment: "{{ env }}"
+  Application: "{{ app_name }}"
+  ApiGatewayStageName: "{{ api_gateway_stage_name }}"
+  ContactEmail: "{{ contact_email }}"
+  BusinessUnit: "{{ business_unit }}"
+  CognitoUserPoolId: "{{ cognitouserpool_stack.stack_outputs.UserPoolId }}"
+  RacAPIDomainNameId: "{{ racapidomainname_stack.stack_outputs.racapidomainname }}"
+  paymentreceiptRestApiId: "{{ apigateway_stack.stack_outputs.paymentreceiptrestapiid }}"
+  GenerateReceiptLambdaArn: "{{ lambda_stack.stack_outputs.GenerateReceiptLambdaArn }}"
+  RecieptCategoryIdentifierLambdaArn: "{{ lambda_stack.stack_outputs.RecieptCategoryIdentifierLambdaArn }}"
+      ##__GATEWAY_PARAM__VARS
+  CreateReceiptLambdaArn: "{{ lambda_stack.stack_outputs.CreateReceiptLambdaArn }}"
+  

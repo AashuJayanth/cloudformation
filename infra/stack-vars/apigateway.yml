@@ -1,0 +1,19 @@
+dependencies:
+
+
+
+  - { stack: cognitouserpool, stack_name: "{{ _cognito_stack }}" }
+  ##__DEPENDENCY_PARAMS__
+  
+template_parameters:
+  Application: "{{ app_name }}"
+  Environment: "{{ env }}"
+  ContactEmail: "{{ contact_email }}"
+  BusinessUnit: "{{ business_unit }}"
+  CognitoUserPoolId: "{{ cognitouserpool_stack.stack_outputs.UserPoolId }}"
+  #paymentreceiptRestApiId: "{{ apigateway_stack.stack_outputs.paymentreceiptrestapiid }}"
+  GenerateReceiptLambdaArn: "{{ lambda_stack.stack_outputs.GenerateReceiptLambdaArn }}"
+  RecieptCategoryIdentifierLambdaArn: "{{ lambda_stack.stack_outputs.RecieptCategoryIdentifierLambdaArn }}"
+      ##__GATEWAY_PARAM__VARS
+  CreateReceiptLambdaArn: "{{ lambda_stack.stack_outputs.CreateReceiptLambdaArn }}"
+  

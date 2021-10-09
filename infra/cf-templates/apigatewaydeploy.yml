@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+
+
+
+
+
+Description: Deploy Sample Api Gateway
+
+Parameters:
+  Application:
+    Type: String
+  Environment:
+    Type: String
+  ContactEmail:
+    Type: String
+  BusinessUnit:
+    Type: String
+  CognitoUserPoolId:
+    Type: String
+  ApiGatewayStageName:
+    Type: String
+  paymentreceiptRestApiId:
+    Type: String  
+  RacAPIDomainNameId:
+    Type: String
+  CreateReceiptLambdaArn:
+    Type: String
+  GenerateReceiptLambdaArn:
+    Type: String
+  RecieptCategoryIdentifierLambdaArn:
+    Type: String
+  ##__GATEWAY_PARAM__
+
+Resources:
+  CreateReceiptUriInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref CreateReceiptLambdaArn
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${paymentreceiptRestApiId}/*/POST/*
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref paymentreceiptRestApiId
+      Description: !Sub ${Environment}-${Application}-Deployment
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn: ApiDeployment
+    Properties:
+      DeploymentId: !Ref ApiDeployment
+      Description: !Sub ${Environment}-${Application}-stage
+      RestApiId: !Ref paymentreceiptRestApiId
+      StageName: !Ref ApiGatewayStageName
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          DataTraceEnabled: false
+          CachingEnabled: false
+          MetricsEnabled: false
+          LoggingLevel: INFO
+      Tags:
+        - Key: application
+          Value: !Ref Application
+        - Key: environment
+          Value: !Ref Environment
+        - Key: contact
+          Value: !Ref ContactEmail
+        - Key: business_unit
+          Value: !Ref BusinessUnit
+  GenerateReceiptUriInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref GenerateReceiptLambdaArn
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${paymentreceiptRestApiId}/*/POST/*
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref paymentreceiptRestApiId
+      Description: !Sub ${Environment}-${Application}-Deployment
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn: ApiDeployment
+    Properties:
+      DeploymentId: !Ref ApiDeployment
+      Description: !Sub ${Environment}-${Application}-stage
+      RestApiId: !Ref paymentreceiptRestApiId
+      StageName: !Ref ApiGatewayStageName
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          DataTraceEnabled: false
+          CachingEnabled: false
+          MetricsEnabled: false
+          LoggingLevel: INFO
+      Tags:
+        - Key: application
+          Value: !Ref Application
+        - Key: environment
+          Value: !Ref Environment
+        - Key: contact
+          Value: !Ref ContactEmail
+        - Key: business_unit
+          Value: !Ref BusinessUnit
+  RecieptCategoryIdentifierUriInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref RecieptCategoryIdentifierLambdaArn
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${paymentreceiptRestApiId}/*/GET/*
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref paymentreceiptRestApiId
+      Description: !Sub ${Environment}-${Application}-Deployment
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    DependsOn: ApiDeployment
+    Properties:
+      DeploymentId: !Ref ApiDeployment
+      Description: !Sub ${Environment}-${Application}-stage
+      RestApiId: !Ref paymentreceiptRestApiId
+      StageName: !Ref ApiGatewayStageName
+      TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          DataTraceEnabled: false
+          CachingEnabled: false
+          MetricsEnabled: false
+          LoggingLevel: INFO
+      Tags:
+        - Key: application
+          Value: !Ref Application
+        - Key: environment
+          Value: !Ref Environment
+        - Key: contact
+          Value: !Ref ContactEmail
+        - Key: business_unit
+          Value: !Ref BusinessUnit
+  ##__GATEWAY_RESOURCE__
+  paymentreceiptPathMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn: ApiStage
+    Properties:
+      DomainName: !Ref RacAPIDomainNameId
+      ApiId: !Ref paymentreceiptRestApiId
+      Stage: "v1"
+      ApiMappingKey: "payment/receipt"

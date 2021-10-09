@@ -1,0 +1,28 @@
+- name: register stack variables for LaaS infra in shared-services account
+  cloudformation_facts:
+    aws_access_key: "{{ss_assumed_role.sts_creds.access_key}}"
+    aws_secret_key: "{{ss_assumed_role.sts_creds.secret_key}}"
+    security_token: "{{ss_assumed_role.sts_creds.session_token}}"
+    stack_name: "{{laas_stack_name}}"
+    region: "{{region}}"
+  register: cf_out
+  when: env != 'sandbox' and env != 'local'
+
+- name: set stack variable
+  set_fact:
+    "laas_stack": "{{cf_out.ansible_facts['cloudformation'][laas_stack_name]}}"
+  when: env != 'sandbox' and env != 'local'
+
+- name: register stack variables for LaaS infra in sandbox account
+  cloudformation_facts:
+    stack_name: "{{laas_stack_name}}"
+    region: "{{region}}"
+  register: cf_out
+  when: env == 'sandbox' or env == 'local'
+
+- name: set stack variable in sandbox account
+  set_fact:
+    "laas_stack": "{{cf_out.ansible_facts['cloudformation'][laas_stack_name]}}"
+  when: env == 'sandbox' or env == 'local'
+
+- debug: var="laas_stack"

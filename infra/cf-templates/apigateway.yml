@@ -1,0 +1,538 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+
+
+
+
+
+
+
+
+Description: ApiGateway for paymentreceipt application
+Parameters:
+  Application:
+    Type: String
+  Environment:
+    Type: String
+  ContactEmail:
+    Type: String
+  BusinessUnit:
+    Type: String
+  CognitoUserPoolId:
+    Type: String
+  CreateReceiptLambdaArn:
+    Type: String
+  GenerateReceiptLambdaArn:
+    Type: String
+  RecieptCategoryIdentifierLambdaArn:
+    Type: String
+  ##__GATEWAY_PARAM__
+
+Resources:
+  ##__QUEUE_ROLE__
+  ApiGateway:  
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub ${Environment}-${Application}
+      FailOnWarnings: false
+      Parameters: 
+        endpointConfigurationTypes: REGIONAL
+      Body:
+        openapi: 3.0.1
+        info:
+          title: "Sample API"
+          version: "1.0.0"
+          description: "Project description goes here - Please update 'ApiDoc.md' file with proper description in your project."
+        servers:
+          - url: api
+        tags:
+          - name: paymentreceiptController
+            description:  paymentreceipt endpoints
+        x-amazon-apigateway-request-validators:
+          all:
+            validateRequestBody: true
+        components:
+          schemas:
+            CreateReceiptRequest:
+              required:
+                - firstName
+                - lastName
+              type: object
+              properties:
+                lastName:
+                  type: string
+                firstName:
+                  type: string
+            CreateReceiptResponse:
+              properties:
+                customerId:
+                  type: string
+              required:
+                - customerId
+              additionalProperties: false
+              type: object
+            GenerateReceiptRequest:
+              required:
+                - firstName
+                - lastName
+              type: object
+              properties:
+                lastName:
+                  type: string
+                firstName:
+                  type: string
+            GenerateReceiptResponse:
+              properties:
+                customerId:
+                  type: string
+              required:
+                - customerId
+              additionalProperties: false
+              type: object
+            RecieptCategoryIdentifierRequest:
+              required:
+                - firstName
+                - lastName
+              type: object
+              properties:
+                lastName:
+                  type: string
+                firstName:
+                  type: string
+            RecieptCategoryIdentifierResponse:
+              properties:
+                customerId:
+                  type: string
+              required:
+                - customerId
+              additionalProperties: false
+              type: object
+            ##__LAMBDA_SCHEMA__            
+            ErrorModel:
+              required:
+                - errors
+              type: object
+              properties:
+                stackTrace:
+                  type: string
+                errors:
+                  type: array
+                  items:
+                    required:
+                      - code
+                      - message
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                      message:
+                        type: string
+          securitySchemes:
+            CognitoApiKeyAuth:
+              type: apiKey
+              name: Authorization
+              in: header
+              x-amazon-apigateway-authtype: cognito_user_pools
+              x-amazon-apigateway-authorizer:
+                type: cognito_user_pools
+                providerARNs:
+                  - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
+        paths:  
+          /receipt:
+            CreateReceipt:
+            post:  
+              summary: Information about CreateReceipt
+              tags:
+                - CreateReceiptController
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      $ref: "#/components/schemas/CreateReceiptRequest"
+              consumes:
+                - application/json
+              produces:
+                - application/json
+              parameters:
+              - name: clientId
+                in: header
+                type: string
+                required: true
+              - name: correlationId
+                in: header
+                type: string
+                required: true
+              - name: userId
+                in: header
+                type: string
+                required: true
+              - name: storeNumber
+                in: header
+                type: string
+              security:
+                - CognitoApiKeyAuth: 
+                  - "rac/read"
+                  - "profile"
+                  - "openid"
+                  - "email"
+              responses:
+                '200':
+                  description: 200 response
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/CreateReceiptResponse'
+                '400':
+                  description: Bad Request
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/ErrorModel'
+                '401':
+                  description: Unauthorized
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/ErrorModel'
+                '500':
+                  description: Internal Server Error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/ErrorModel'
+                '503':
+                  description: Service Temporarily Unavailable
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/ErrorModel'
+              x-amazon-apigateway-integration:
+                ##__QUEUE_INT__
+                
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateReceiptLambdaArn}/invocations'
+                responses:
+                  default:
+                    statusCode: '200'
+                passthroughBehavior: 'when_no_match'
+                httpMethod: 'POST'
+                contentHandling: 'CONVERT_TO_TEXT'
+                type: 'aws_proxy'
+            options:
+              tags:
+                - paymentreceiptController
+              responses:
+                '200':
+                  description: 200 response
+                  headers:
+                    Access-Control-Allow-Origin:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Methods:
+                      schema:
+                        type: string
+                    Access-Control-Allow-Headers:
+                      schema:
+                        type: string
+                  content: { }
+              x-amazon-apigateway-integration:
+                responses:
+                  default:
+                    statusCode: '200'
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+                      method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,correlationId,pid,Cache-Control,Pragma,userId,clientId'"
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: 'when_no_match'
+                requestTemplates:
+                  application/json: '{"statusCode": 200}'
+                type: 'mock'
+            /receipt/generate/{receiptId}:
+              post:
+                summary: Create a record
+                tags:
+                  - GenerateReceiptController
+                # requestBody:
+                #   required: true
+                #   content:
+                #     application/json:
+                #       schema:
+                #         $ref: "#/components/schemas/GenerateReceiptRequest"
+                consumes:
+                  - application/json
+                produces:
+                  - application/json
+                parameters:
+                - name: receiptId
+                  in: path
+                  type: string
+                  required: true
+                - name: clientId
+                  in: header
+                  type: string
+                  required: true
+                - name: correlationId
+                  in: header
+                  type: string
+                  required: true
+                - name: userId
+                  in: header
+                  type: string
+                  required: true
+                - name: storeNumber
+                  in: header
+                  type: string
+                security:
+                  - CognitoApiKeyAuth: 
+                    - "rac/read"
+                    - "profile"
+                    - "openid"
+                    - "email"
+                responses:
+                  '200':
+                    description: 200 response
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/GenerateReceiptResponse'
+                  '400':
+                    description: Bad Request
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                  '401':
+                    description: Unauthorized
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                  '500':
+                    description: Internal Server Error
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                  '503':
+                    description: Service Temporarily Unavailable
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                x-amazon-apigateway-integration:
+                  ##__QUEUE_INT__
+                  
+                  uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GenerateReceiptLambdaArn}/invocations'
+                  responses:
+                    default:
+                      statusCode: '200'
+                  passthroughBehavior: 'when_no_match'
+                  httpMethod: 'POST'
+                  contentHandling: 'CONVERT_TO_TEXT'
+                  type: 'aws_proxy'
+              options:
+                tags:
+                  - paymentreceiptController
+                responses:
+                  '200':
+                    description: 200 response
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: string
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: string
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: string
+                    content: { }
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: '200'
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,correlationId,pid,Cache-Control,Pragma,userId,clientId'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: 'when_no_match'
+                  requestTemplates:
+                    application/json: '{"statusCode": 200}'
+                  type: 'mock'
+            /receipt/reciept-category-identifier:
+              get:
+                summary: Information about RecieptCategoryIdentifier
+                tags:
+                  - RecieptCategoryIdentifierController
+                requestBody:
+                  required: true
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/RecieptCategoryIdentifierRequest"
+                consumes:
+                  - application/json
+                produces:
+                  - application/json
+                parameters:
+                - name: clientId
+                  in: header
+                  type: string
+                  required: true
+                - name: correlationId
+                  in: header
+                  type: string
+                  required: true
+                - name: userId
+                  in: header
+                  type: string
+                  required: true
+                - name: storeNumber
+                  in: header
+                  type: string
+                security:
+                  - CognitoApiKeyAuth: 
+                    - "rac/read"
+                    - "profile"
+                    - "openid"
+                    - "email"
+                responses:
+                  '200':
+                    description: 200 response
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/RecieptCategoryIdentifierResponse'
+                  '400':
+                    description: Bad Request
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                  '401':
+                    description: Unauthorized
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                  '500':
+                    description: Internal Server Error
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                  '503':
+                    description: Service Temporarily Unavailable
+                    content:
+                      application/json:
+                        schema:
+                          $ref: '#/components/schemas/ErrorModel'
+                x-amazon-apigateway-integration:
+                  ##__QUEUE_INT__
+                  
+                  uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecieptCategoryIdentifierLambdaArn}/invocations'
+                  responses:
+                    default:
+                      statusCode: '200'
+                  passthroughBehavior: 'when_no_match'
+                  httpMethod: 'POST'
+                  contentHandling: 'CONVERT_TO_TEXT'
+                  type: 'aws_proxy'
+              options:
+                tags:
+                  - paymentreceiptController
+                responses:
+                  '200':
+                    description: 200 response
+                    headers:
+                      Access-Control-Allow-Origin:
+                        schema:
+                          type: string
+                      Access-Control-Allow-Methods:
+                        schema:
+                          type: string
+                      Access-Control-Allow-Headers:
+                        schema:
+                          type: string
+                    content: { }
+                x-amazon-apigateway-integration:
+                  responses:
+                    default:
+                      statusCode: '200'
+                      responseParameters:
+                        method.response.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+                        method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,correlationId,pid,Cache-Control,Pragma,userId,clientId'"
+                        method.response.header.Access-Control-Allow-Origin: "'*'"
+                  passthroughBehavior: 'when_no_match'
+                  requestTemplates:
+                    application/json: '{"statusCode": 200}'
+                  type: 'mock'
+            ##__GATEWAY_RESOURCE__
+                  
+        Tags:
+          - Key: application
+            Value: !Ref Application
+          - Key: environment
+            Value: !Ref Environment
+          - Key: contact
+            Value: !Ref ContactEmail
+          - Key: business_unit
+            Value: !Ref BusinessUnit
+    GatewayResponse401:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        ResponseType: UNAUTHORIZED
+        ResponseTemplates:
+          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"401\",\"message\":$context.error.messageString}]}"
+        RestApiId:
+          Ref: ApiGateway
+        
+    GatewayResponse403:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        ResponseType: ACCESS_DENIED
+        ResponseTemplates:
+          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"403\",\"message\":$context.error.messageString}]}"
+        RestApiId:
+          Ref: ApiGateway
+        
+    GatewayResponse500:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        ResponseType: DEFAULT_5XX
+        ResponseTemplates:
+          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"500\",\"message\":$context.error.messageString}]}"
+        RestApiId:
+          Ref: ApiGateway
+        
+    GatewayResponse504:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        ResponseType: INTEGRATION_TIMEOUT
+        ResponseTemplates:
+          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"504\",\"message\":$context.error.messageString}]}"
+        RestApiId:
+          Ref: ApiGateway
+        
+  Outputs:
+    paymentreceiptrestapiid:
+      Value: !Ref ApiGateway
+    ApiGatewaydomain:
+      Value: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
+    

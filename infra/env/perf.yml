@@ -1,0 +1,37 @@
+---
+# use this file to define environment-specific variables -- you can also override
+# global variables here
+
+# this should reference one of the acounts in the global 'account' object:
+account: "{{accounts.dev_account}}"
+
+# this bucket already exists and is only needed if you need a place to securely store things,
+# like ssh keys -- otherwise, just delete or comment out this variable;
+# there is currently one for dev account, one for prod account, and
+# one for svc account -- rac-dev-admin, rac-prod-admin, rac-svc-admin, respectively
+#-- these are *per-AWS account*, not environment:
+admin_bucket: rac-dev-admin
+
+# this bucket is used to store cf templates during deployments, as well
+# as other app-env specific artifacts that may be needed for applications
+# or their deployment; it is intended that you will create/ensure this bucket
+# each time create_stacks.yml is run:
+#rac_allowedip_list_id: "041b0e0f-ea2a-428c-b7bb-1a5a28d27c07"
+rdsdb_logging: true
+laas_stack_name: "test-laas-infra"
+
+# this variable controls the buckets that are actually created / ensured
+# when you run create_stacks.yml:
+my_buckets: []
+#- "{{infra_bucket}}"
+#- "rac-{{ env }}- app
+
+# this variable is only needed if using ansible to provision
+# a key pair for ssh access to ec2 instances -- once the keys are
+# created, you can access the public / private key by referencing
+# ec2_key_pairs.<key_name>.key.name
+my_ec2_keys: []
+
+# Example if using ec2 instances -- you could use this variable to define
+# per-environment instance types
+# ec2_instance_type: t2.medium
