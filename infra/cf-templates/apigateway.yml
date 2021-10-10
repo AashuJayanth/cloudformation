@@ -1,13 +1,4 @@
 AWSTemplateFormatVersion: "2010-09-09"
-
-
-
-
-
-
-
-
-
 Description: ApiGateway for paymentreceipt application
 Parameters:
   Application:
@@ -30,12 +21,12 @@ Parameters:
 
 Resources:
   ##__QUEUE_ROLE__
-  ApiGateway:  
+  ApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub ${Environment}-${Application}
       FailOnWarnings: false
-      Parameters: 
+      Parameters:
         endpointConfigurationTypes: REGIONAL
       Body:
         openapi: 3.0.1
@@ -107,7 +98,7 @@ Resources:
                 - customerId
               additionalProperties: false
               type: object
-            ##__LAMBDA_SCHEMA__            
+            ##__LAMBDA_SCHEMA__
             ErrorModel:
               required:
                 - errors
@@ -137,10 +128,9 @@ Resources:
                 type: cognito_user_pools
                 providerARNs:
                   - !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${CognitoUserPoolId}
-        paths:  
+        paths:
           /receipt:
-            CreateReceipt:
-            post:  
+            post:
               summary: Information about CreateReceipt
               tags:
                 - CreateReceiptController
@@ -171,7 +161,7 @@ Resources:
                 in: header
                 type: string
               security:
-                - CognitoApiKeyAuth: 
+                - CognitoApiKeyAuth:
                   - "rac/read"
                   - "profile"
                   - "openid"
@@ -208,8 +198,6 @@ Resources:
                       schema:
                         $ref: '#/components/schemas/ErrorModel'
               x-amazon-apigateway-integration:
-                ##__QUEUE_INT__
-                
                 uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateReceiptLambdaArn}/invocations'
                 responses:
                   default:
@@ -283,7 +271,7 @@ Resources:
                   in: header
                   type: string
                 security:
-                  - CognitoApiKeyAuth: 
+                  - CognitoApiKeyAuth:
                     - "rac/read"
                     - "profile"
                     - "openid"
@@ -321,7 +309,7 @@ Resources:
                           $ref: '#/components/schemas/ErrorModel'
                 x-amazon-apigateway-integration:
                   ##__QUEUE_INT__
-                  
+
                   uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GenerateReceiptLambdaArn}/invocations'
                   responses:
                     default:
@@ -391,7 +379,7 @@ Resources:
                   in: header
                   type: string
                 security:
-                  - CognitoApiKeyAuth: 
+                  - CognitoApiKeyAuth:
                     - "rac/read"
                     - "profile"
                     - "openid"
@@ -429,7 +417,7 @@ Resources:
                           $ref: '#/components/schemas/ErrorModel'
                 x-amazon-apigateway-integration:
                   ##__QUEUE_INT__
-                  
+
                   uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RecieptCategoryIdentifierLambdaArn}/invocations'
                   responses:
                     default:
@@ -468,7 +456,7 @@ Resources:
                     application/json: '{"statusCode": 200}'
                   type: 'mock'
             ##__GATEWAY_RESOURCE__
-                  
+
         Tags:
           - Key: application
             Value: !Ref Application
@@ -478,61 +466,61 @@ Resources:
             Value: !Ref ContactEmail
           - Key: business_unit
             Value: !Ref BusinessUnit
-    GatewayResponse401:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        ResponseType: UNAUTHORIZED
-        ResponseTemplates:
-          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"401\",\"message\":$context.error.messageString}]}"
-        RestApiId:
-          Ref: ApiGateway
-        
-    GatewayResponse403:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        ResponseType: ACCESS_DENIED
-        ResponseTemplates:
-          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"403\",\"message\":$context.error.messageString}]}"
-        RestApiId:
-          Ref: ApiGateway
-        
-    GatewayResponse500:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        ResponseType: DEFAULT_5XX
-        ResponseTemplates:
-          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"500\",\"message\":$context.error.messageString}]}"
-        RestApiId:
-          Ref: ApiGateway
-        
-    GatewayResponse504:
-      Type: 'AWS::ApiGateway::GatewayResponse'
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
-        ResponseType: INTEGRATION_TIMEOUT
-        ResponseTemplates:
-          application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"504\",\"message\":$context.error.messageString}]}"
-        RestApiId:
-          Ref: ApiGateway
-        
-  Outputs:
-    paymentreceiptrestapiid:
-      Value: !Ref ApiGateway
-    ApiGatewaydomain:
-      Value: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
-    
+
+  GatewayResponse401:
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      ResponseType: UNAUTHORIZED
+      ResponseTemplates:
+        application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"401\",\"message\":$context.error.messageString}]}"
+      RestApiId:
+        Ref: ApiGateway
+
+  GatewayResponse403:
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      ResponseType: ACCESS_DENIED
+      ResponseTemplates:
+        application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"403\",\"message\":$context.error.messageString}]}"
+      RestApiId:
+        Ref: ApiGateway
+
+  GatewayResponse500:
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      ResponseType: DEFAULT_5XX
+      ResponseTemplates:
+        application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"500\",\"message\":$context.error.messageString}]}"
+      RestApiId:
+        Ref: ApiGateway
+
+  GatewayResponse504:
+    Type: 'AWS::ApiGateway::GatewayResponse'
+    Properties:
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      ResponseType: INTEGRATION_TIMEOUT
+      ResponseTemplates:
+        application/json: "{\"requestId\":\"$context.requestId\",\"traceId\":\"$context.xrayTraceId\",\"errors\":[{\"code\":\"504\",\"message\":$context.error.messageString}]}"
+      RestApiId:
+        Ref: ApiGateway
+
+Outputs:
+  paymentreceiptrestapiid:
+    Value: !Ref ApiGateway
+  ApiGatewaydomain:
+    Value: !Sub ${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com
